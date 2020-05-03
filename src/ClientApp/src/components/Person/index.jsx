@@ -6,8 +6,14 @@ import { MAX_HEIGHT, MAX_WIDTH } from "../../consts/sizes";
 const HEALTH_COLORS = {
     healthy: "#d2b1e7",
     sick: "red",
-    dead: "black"
+    dead: "black",
+    doctor: "green"
 };
+
+const BORED_COLORS = {
+    bored: "#5499c7",
+    notBored: "black"
+}
 
 export default function Person({ person, onClick }) {
     const x = person.position.x / MAX_WIDTH * 100;
@@ -19,7 +25,8 @@ export default function Person({ person, onClick }) {
                 { 
                     left: `${ x }%`,
                     top: `${ y }%`,
-                    backgroundColor: HEALTH_COLORS[person.health.toLowerCase()]  
+                    backgroundColor: HEALTH_COLORS[person.health.toLowerCase()],
+                    borderColor: BORED_COLORS[person.isBored ? "bored" : "notBored"]
                 }
             }
             onClick={ () => onClick(person.id) }
