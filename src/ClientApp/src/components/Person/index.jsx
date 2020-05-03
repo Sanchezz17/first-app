@@ -13,6 +13,7 @@ const HEALTH_COLORS = {
 export default function Person({ person, onClick }) {
     const x = person.position.x / MAX_WIDTH * 100;
     const y = person.position.y / MAX_HEIGHT * 100;
+    const color = person.isBored && person.health === "Healthy" ? "#000080" :  HEALTH_COLORS[person.health.toLowerCase()];
     return (
         <div
             className={ styles.root }
@@ -20,7 +21,7 @@ export default function Person({ person, onClick }) {
                 { 
                     left: `${ x }%`,
                     top: `${ y }%`,
-                    backgroundColor: HEALTH_COLORS[person.health.toLowerCase()]  
+                    backgroundColor: color
                 }
             }
             onClick={ () => onClick(person.id) }
