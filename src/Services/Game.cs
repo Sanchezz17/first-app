@@ -86,17 +86,17 @@ namespace covidSim.Services
 
         private void InfectPeople()
         {
-            var walkingPeople = People.Where(p => p.State == PersonState.Walking).ToList();
-            var infectedPeople = walkingPeople.Where(p => p.Health == PersonHealth.Sick).ToList();
-            var healthyPeople = walkingPeople.Where(p => p.Health == PersonHealth.Healthy);
-            var pairs = 
+            var infectedPeople = People.Where(p => p.Health == PersonHealth.Sick).ToList();
+            var healthyPeople = People.Where(p => p.Health == PersonHealth.Healthy);
+            var healthInfectedPairs = 
                 from healthy in healthyPeople
                 from infected in infectedPeople
                 select (healthy, infected);
-            foreach (var (healthy, infected) in pairs)
+            foreach (var (healthy, infected) in healthInfectedPairs)
             {
                 if (_random.NextDouble() >= ChanceOfInfection &&
-                    (healthy.Position.GetDistanceTo(infected.Position) <= InfectionRadius || 
+                    (healthy.State == PersonState.Walking && infected.State == PersonState.Walking && 
+                    healthy.Position.GetDistanceTo(infected.Position) <= InfectionRadius || 
                      healthy.State == PersonState.AtHome && infected.State == PersonState.AtHome && 
                                                                   healthy.HomeId == infected.HomeId))
                     healthy.ChangeHealth(PersonHealth.Sick);
