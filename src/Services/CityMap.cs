@@ -52,8 +52,8 @@ namespace covidSim.Services
 
         private static House[] SetShops(House[] map)
         {
-            map[map.Length % 2].IsShop = true;
-            map[map.Length % 9].IsShop = true;
+            map[0].IsShop = true;
+            map[10].IsShop = true;
 
             return map;
         }

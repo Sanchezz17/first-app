@@ -107,7 +107,8 @@ namespace covidSim.Services
                 stepsInShop++;
 
                 var nextPosition = GenerateNextRandomPosition();
-                if (isCoordInField(nextPosition) && IsCoordsInHouse(nextPosition))
+
+                if (isCoordInField(nextPosition) && IsCoordsInHouse(nextPosition, shopId))
                     Position = nextPosition;
             }
             else
@@ -173,12 +174,12 @@ namespace covidSim.Services
 
         private void CalcNextStepForPersonAtHome()
         {
-            var goingWalk = true;//random.NextDouble() < 0.005;
+            var goingWalk = random.NextDouble() < 0.005;
             if (!goingWalk)
                 CalcNextPositionForStayingHomePerson();
             else
             {
-                var goingShop = true;//random.NextDouble() < 0.4;
+                var goingShop = random.NextDouble() < 0.4;
                 if (goingShop)
                 {
                     State = PersonState.GoingShop;
@@ -207,13 +208,13 @@ namespace covidSim.Services
         {
             var nextPosition = GenerateNextRandomPosition();
 
-            if (isCoordInField(nextPosition) && IsCoordsInHouse(nextPosition))
+            if (isCoordInField(nextPosition) && IsCoordsInHouse(nextPosition, HomeId))
                 Position = nextPosition;
         }
 
-        private bool IsCoordsInHouse(Vec vec)
+        private bool IsCoordsInHouse(Vec vec, int homeId)
         {
-            var houseCoordinates = map.Houses[HomeId].Coordinates.LeftTopCorner;
+            var houseCoordinates = map.Houses[homeId].Coordinates.LeftTopCorner;
 
             return
                 vec.X >= houseCoordinates.X && vec.X <= HouseCoordinates.Width+ houseCoordinates.X &&
