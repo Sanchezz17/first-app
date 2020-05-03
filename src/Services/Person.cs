@@ -7,9 +7,7 @@ namespace covidSim.Services
     public class Person
     {
         private const int MaxDistancePerTurn = 30;
-        private const int InitialStepsToRecovery = 35;
         private const int InitialStepsToRot = 10;
-        private const double ProbabilityOfDying = 0.000003;
         private static Random random = new Random();
         public PersonHealth Health = PersonHealth.Healthy;
         private readonly CityMap map;
@@ -91,7 +89,8 @@ namespace covidSim.Services
 
         private bool TryToDie()
         {
-            if (random.NextDouble() > ProbabilityOfDying) return false;
+            if (random.NextDouble() > Game.Instance.Configuration.ProbabilityOfDying)
+                return false;
             ChangeHealth(PersonHealth.Dead);
             return true;
         }
@@ -103,7 +102,7 @@ namespace covidSim.Services
             switch (next)
             {
                 case PersonHealth.Sick:
-                    StepsToRecovery = InitialStepsToRecovery;
+                    StepsToRecovery = Game.Instance.Configuration.RecoveryTime;
                     break;
                 case PersonHealth.Dead:
                     StepsToRot = InitialStepsToRot;
@@ -113,7 +112,7 @@ namespace covidSim.Services
 
         private void CalcNextStepForPersonAtHome()
         {
-            var goingWalk = random.NextDouble() < 0.005;
+            var goingWalk = random.NextDouble() < Game.Instance.Configuration.ProbabilityToLeaveHome;
             if (!goingWalk)
                 CalcNextPositionForStayingHomePerson();
             else

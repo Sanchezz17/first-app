@@ -2,12 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using covidSim.ClientApp.src.utils;
+using covidSim.Models;
 using covidSim.Utils;
 
 namespace covidSim.Services
 {
     public class Game
     {
+        public GameConfiguration Configuration { get; set; }
         public List<Person> People;
         public CityMap Map;
         private DateTime _lastUpdate;
@@ -20,14 +22,12 @@ namespace covidSim.Services
         private const double InfectionRadius = 7.0;
         private const double HealingRadius = 7.0;
         private const double ChanceOfInfection = 0.5;
-        private const double PercentageOfDoctors = 0.1;
-        private const int DoctorCount = (int) (PeopleCount * PercentageOfDoctors);
         public const int FieldWidth = 1000;
         public const int FieldHeight = 500;
-        public const int MaxPeopleInHouse = 10;
 
         private Game()
         {
+            Configuration = new GameConfiguration();
             Map = new CityMap();
             People = CreatePopulation();
             _lastUpdate = DateTime.Now;
@@ -45,7 +45,7 @@ namespace covidSim.Services
             var doctorIndexes = Enumerable
                 .Range(0, PeopleCount)
                 .OrderBy(_ => _random.Next())
-                .Take(DoctorCount)
+                .Take((int) (PeopleCount * Configuration.PercentageOfDoctors))
                 .ToHashSet();
             return Enumerable
                 .Repeat(0, PeopleCount)
@@ -59,7 +59,7 @@ namespace covidSim.Services
             {
                 var homeId = _random.Next(CityMap.HouseAmount);
 
-                if (Map.Houses[homeId].ResidentCount < MaxPeopleInHouse)
+                if (Map.Houses[homeId].ResidentCount < Configuration.MaxPeopleInHouse)
                 {
                     Map.Houses[homeId].ResidentCount++;
                     return homeId;
