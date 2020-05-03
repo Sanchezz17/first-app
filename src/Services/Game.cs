@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using covidSim.ClientApp.src.utils;
 using covidSim.Utils;
 
 namespace covidSim.Services
@@ -16,8 +17,11 @@ namespace covidSim.Services
         
         public const int PeopleCount = 320;
 
-        private const double InfectionRadrius = 7.0;
+        private const double InfectionRadius = 7.0;
+        private const double HealingRadius = 7.0;
         private const double ChanceOfInfection = 0.5;
+        private const double PercentageOfDoctors = 0.1;
+        private const int DoctorCount = (int) (PeopleCount * PercentageOfDoctors);
         public const int FieldWidth = 1000;
         public const int FieldHeight = 500;
         public const int MaxPeopleInHouse = 10;
@@ -38,9 +42,14 @@ namespace covidSim.Services
 
         private List<Person> CreatePopulation()
         {
+            var doctorIndexes = Enumerable
+                .Range(0, PeopleCount)
+                .OrderBy(_ => _random.Next())
+                .Take(DoctorCount)
+                .ToHashSet();
             return Enumerable
                 .Repeat(0, PeopleCount)
-                .Select((_, index) => new Person(index, FindHome(), Map, index <= PeopleCount * 0.03))
+                .Select((_, index) => new Person(index, FindHome(), Map, GetHealth(doctorIndexes, index)))
                 .ToList();
         }
 
@@ -66,6 +75,7 @@ namespace covidSim.Services
             {
                 CalcNextStep();
                 InfectPeople();
+                HealPeople();
             }
 
             return this;
@@ -89,16 +99,34 @@ namespace covidSim.Services
             var walkingPeople = People.Where(p => p.State == PersonState.Walking).ToList();
             var infectedPeople = walkingPeople.Where(p => p.Health == PersonHealth.Sick).ToList();
             var healthyPeople = walkingPeople.Where(p => p.Health == PersonHealth.Healthy);
-            var pairs = 
-                from healthy in healthyPeople
-                from infected in infectedPeople
-                select (healthy, infected);
+            var pairs = healthyPeople.Multiply(infectedPeople);
             foreach (var (healthy, infected) in pairs)
             {
-                if (healthy.Position.GetDistanceTo(infected.Position) <= InfectionRadrius && 
+                if (healthy.Position.GetDistanceTo(infected.Position) <= InfectionRadius && 
                     _random.NextDouble() >= ChanceOfInfection)
                     healthy.ChangeHealth(PersonHealth.Sick);
             }
+        }
+
+        private void HealPeople()
+        {
+            var doctors = People.Where(p => p.Health == PersonHealth.Doctor);
+            var infectedPeople = People.Where(p => p.Health == PersonHealth.Sick);
+            var pairs = doctors.Multiply(infectedPeople);
+            foreach (var (doctor, infected) in pairs)
+            {
+                if (doctor.Position.GetDistanceTo(infected.Position) <= HealingRadius)
+                    infected.ChangeHealth(PersonHealth.Healthy);
+            }
+        }
+        
+        private static PersonHealth GetHealth(ICollection<int> doctorIndexes, int index)
+        {
+            if (doctorIndexes.Contains(index))
+                return PersonHealth.Doctor;
+            if (index <= PeopleCount * 0.03)
+                return PersonHealth.Sick;
+            return PersonHealth.Healthy;
         }
     }
 }
