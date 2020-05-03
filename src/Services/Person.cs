@@ -124,31 +124,7 @@ namespace covidSim.Services
             if (shopId == -1)
                 return;
 
-            var game = Game.Instance;
-            var shopCoords = game.Map.Houses[shopId].Coordinates.LeftTopCorner;
-            var shopCenter = new Vec(shopCoords.X + HouseCoordinates.Width / 2, shopCoords.Y + HouseCoordinates.Height / 2);
-
-            var xDiff = shopCenter.X - Position.X;
-            var yDiff = shopCenter.Y - Position.Y;
-            var xDistance = Math.Abs(xDiff);
-            var yDistance = Math.Abs(yDiff);
-
-            var distance = xDistance + yDistance;
-            if (distance <= MaxDistancePerTurn)
-            {
-                Position = shopCenter;
-                State = PersonState.AtShop;
-                stepsInShop++;
-                return;
-            }
-
-            var direction = new Vec(Math.Sign(xDiff), Math.Sign(yDiff));
-
-            var xLength = Math.Min(xDistance, MaxDistancePerTurn);
-            var newX = Position.X + xLength * direction.X;
-            var yLength = MaxDistancePerTurn - xLength;
-            var newY = Position.Y + yLength * direction.Y;
-            Position = new Vec(newX, newY);
+            CalcNextPositionForPersonGoingTo(shopId, PersonState.AtShop);
         }
 
         private bool TryToDie()
@@ -265,8 +241,13 @@ namespace covidSim.Services
 
         private void CalcNextPositionForGoingHomePerson()
         {
+            CalcNextPositionForPersonGoingTo(HomeId, PersonState.AtHome);
+        }
+
+        private void CalcNextPositionForPersonGoingTo(int houseId, PersonState destionationState)
+        {
             var game = Game.Instance;
-            var homeCoord = game.Map.Houses[HomeId].Coordinates.LeftTopCorner;
+            var homeCoord = game.Map.Houses[houseId].Coordinates.LeftTopCorner;
             var homeCenter = new Vec(homeCoord.X + HouseCoordinates.Width / 2,
                 homeCoord.Y + HouseCoordinates.Height / 2);
 
@@ -279,7 +260,7 @@ namespace covidSim.Services
             if (distance <= MaxDistancePerTurn)
             {
                 Position = homeCenter;
-                State = PersonState.AtHome;
+                State = destionationState;
                 return;
             }
 
