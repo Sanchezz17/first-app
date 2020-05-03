@@ -10,6 +10,8 @@ namespace covidSim.Services
         private const int ComfortablePeopleAmountInHouse = 5;
         private const int HousesInGroup = 4;
         private const int GroupsInRow = 4; // |..|..|..|..|  |..|..|..|..|  |..|..|..|..|  |..|..|..|..|
+
+        private const int ShopsCount = 2;
         
         public const int HouseAmount = Game.PeopleCount / ComfortablePeopleAmountInHouse;
 
@@ -40,8 +42,18 @@ namespace covidSim.Services
                 var x = groupNum * groupWidth + groupNum * gapInRow + houseInGroup * HouseCoordinates.Width;
                 
                 var coordinate = new Vec(x, y);
-                map[i] = new House(i, coordinate);
+                map[i] = new House(i, coordinate, false);
             }
+
+            map = SetShops(map);
+
+            return map;
+        }
+
+        private static House[] SetShops(House[] map)
+        {
+            map[map.Length % 2].IsShop = true;
+            map[map.Length % 9].IsShop = true;
 
             return map;
         }
