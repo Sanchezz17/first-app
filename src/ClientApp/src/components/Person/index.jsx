@@ -6,7 +6,8 @@ import { MAX_HEIGHT, MAX_WIDTH } from "../../consts/sizes";
 const HEALTH_COLORS = {
     healthy: "#d2b1e7",
     sick: "red",
-    dead: "black"
+    dead: "black",
+    doctor: "green"
 };
 
 const BORED_COLORS = {
