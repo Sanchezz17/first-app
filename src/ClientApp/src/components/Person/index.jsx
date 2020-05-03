@@ -11,7 +11,7 @@ const HEALTH_COLORS = {
 
 const BORED_COLORS = {
     bored: "#5499c7",
-	notBored: "black"
+    notBored: "black"
 }
 
 export default function Person({ person, onClick }) {
