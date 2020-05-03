@@ -58,7 +58,7 @@ namespace covidSim.Services
             var delta = new Vec(xLength * direction.X, yLength * direction.Y);
             var nextPosition = new Vec(Position.X + delta.X, Position.Y + delta.Y);
 
-            if (isCoordInField(nextPosition) && (!isCoordNotInHome(Position) || isCoordNotInHome(nextPosition)))
+            if (IsCoordInField(nextPosition) && IsCoordNotInOtherHouse(nextPosition))
             {
                 Position = nextPosition;
             }
@@ -117,7 +117,7 @@ namespace covidSim.Services
             return directions[index];
         }
 
-        private bool isCoordInField(Vec vec)
+        private bool IsCoordInField(Vec vec)
         {
             var belowZero = vec.X < 0 || vec.Y < 0;
             var beyondField = vec.X > Game.FieldWidth || vec.Y > Game.FieldHeight;
@@ -125,9 +125,9 @@ namespace covidSim.Services
             return !(belowZero || beyondField);
         }
 
-        private bool isCoordNotInHome(Vec vec)
+        private bool IsCoordNotInOtherHouse(Vec vec)
         {
-            return Game.Instance.Map.Houses.All(x =>
+            return Game.Instance.Map.Houses.Where(x => x.Id != HomeId).All(x =>
             {
                 var homeCoord = x.Coordinates.LeftTopCorner;
                 var homeCenter = new Vec(homeCoord.X + HouseCoordinates.Width / 2,
