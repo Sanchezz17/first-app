@@ -7,8 +7,7 @@ namespace covidSim.Services
 {
     public class Person
     {
-        private static readonly Vec[] Directions = new Vec[]
-        {
+        private static readonly Vec[] Directions = {
             new Vec(-1, -1),
             new Vec(-1, 1),
             new Vec(1, -1),
@@ -18,6 +17,7 @@ namespace covidSim.Services
         private const int MaxDistancePerTurn = 30;
         private const int InitialStepsToRecovery = 35;
         private const int InitialStepsToRot = 10;
+        private const int InitialStepsToLeaveMarket = 10;
         private const double ProbabilityOfDying = 0.000003;
         private static Random random = new Random();
         public PersonHealth Health = PersonHealth.Healthy;
@@ -66,13 +66,11 @@ namespace covidSim.Services
         public int HomeId;
         public Vec Position;
         public bool IsSick;
-
         public bool IsBored;
-        
         private int timeAtHome;
-      
         public int StepsToRecovery;
         public int StepsToRot;
+        private int timeAtMarket;
 
         public bool OutOfTheGame => Health == PersonHealth.Dead && StepsToRot == 0;
 
@@ -106,6 +104,15 @@ namespace covidSim.Services
 
         private void Move()
         {
+            if (random.NextDouble() >= 0.6 && State == PersonState.Walking)
+                State = PersonState.GoingMarket;
+
+            if (IsCoordInHouse(Position, nearestMarket) && State != PersonState.AtMarket && State != PersonState.GoingHome)
+            {
+                State = PersonState.AtMarket;
+                timeAtMarket = InitialStepsToLeaveMarket;
+            }
+
             switch (State)
             {
                 case PersonState.AtHome:                    
@@ -116,6 +123,12 @@ namespace covidSim.Services
                     break;
                 case PersonState.GoingHome:                   
                     CalcNextPositionForGoingHomePerson();
+                    break;
+                case PersonState.GoingMarket:
+                    CalcNextPositionForGoingMarketPerson();
+                    break;
+                case PersonState.AtMarket:
+                    CalcNextStepForPersonAtMarket();
                     break;
             }
         }
@@ -139,6 +152,14 @@ namespace covidSim.Services
                     StepsToRot = InitialStepsToRot;
                     break;
             }
+        }
+
+        private void CalcNextStepForPersonAtMarket()
+        {
+            timeAtMarket--;
+            if (timeAtMarket == 0)
+                State = PersonState.GoingHome;
+            Console.WriteLine(timeAtMarket);
         }
 
         private void CalcNextStepForPersonAtHome()
@@ -182,11 +203,45 @@ namespace covidSim.Services
             return nextPosition;
         }
 
+        private void CalcNextPositionForGoingMarketPerson()
+        {
+            var xLength = random.Next(MaxDistancePerTurn);
+            var yLength = MaxDistancePerTurn - xLength;
+            var randomDirection = ChooseRandomDirection();
+            var nextPosition = Position.Add(new Vec(xLength * randomDirection.X, yLength * randomDirection.Y));;
+            var minDistance = double.MaxValue;
+            foreach (var direction in Directions)
+            {
+                var delta = new Vec(xLength * direction.X, yLength * direction.Y);
+                var nextPositionByCurrentDirection = Position.Add(delta);
+                var marketCoordinate =
+                    nearestMarket.Coordinates.LeftTopCorner.Add(
+                        new Vec(HouseCoordinates.Width, HouseCoordinates.Height));
+                var currentDistance = nextPositionByCurrentDirection.GetDistanceTo(marketCoordinate);
+                if (currentDistance < minDistance && !IsCoordInAnyHouse(nextPositionByCurrentDirection))
+                {
+                    nextPosition = nextPositionByCurrentDirection;
+                    minDistance = currentDistance;
+                }
+            }
+            
+            if (isCoordInField(nextPosition) && !IsCoordInAnyHouse(nextPosition))
+            {
+                Position = nextPosition;
+            }
+            else
+            {
+                CalcNextPositionForWalkingPerson();
+            }
+        }
+        
         private void CalcNextPositionForWalkingPerson()
         {
             var xLength = random.Next(MaxDistancePerTurn);
             var yLength = MaxDistancePerTurn - xLength;
-            var nextPosition = ChooseNearestToMarketNextPosition(xLength, yLength);
+            var direction = ChooseRandomDirection();
+            var delta = new Vec(xLength * direction.X, yLength * direction.Y);
+            var nextPosition = new Vec(Position.X + delta.X, Position.Y + delta.Y);
 
             if (isCoordInField(nextPosition) && !IsCoordInAnyHouse(nextPosition))
             {
@@ -254,14 +309,12 @@ namespace covidSim.Services
             return Directions[index];
         }
 
-        private Vec ChooseNearestToMarketNextPosition(int xLength, int yLength)
+        /*private Vec ChooseNearestToMarketNextPosition()
         {
             Vec nearestToMarketDirection = null;
             var newMinDistanceToMarket = double.MaxValue;
             foreach (var direction in Directions)
             {
-                var delta = new Vec(xLength * direction.X, yLength * direction.Y);
-                var nextPosition = Position.Add(delta);
                 var currentDistanceToMarket = nextPosition.GetDistanceTo(nearestMarket.Coordinates.LeftTopCorner);
                 if (currentDistanceToMarket < newMinDistanceToMarket
                     && !IsCoordInAnyHouse(nextPosition))
@@ -272,7 +325,7 @@ namespace covidSim.Services
             }
 
             return nearestToMarketDirection ?? ChooseRandomDirection();
-        }
+        }*/
 
         private bool isCoordInField(Vec vec)
         {
@@ -282,7 +335,9 @@ namespace covidSim.Services
             return !(belowZero || beyondField);
         }
 
-        private bool IsCoordInAnyHouse(Vec vec) => map.Houses.Any(h => IsCoordInHouse(vec, h));
+        private bool IsCoordInAnyHouse(Vec vec) => map.Houses
+            .Where(h => !h.IsMarket)
+            .Any(h => IsCoordInHouse(vec, h));
 
         private static bool IsCoordInHouse(Vec vec, House house)
         {
