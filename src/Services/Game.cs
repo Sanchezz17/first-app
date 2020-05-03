@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using covidSim.Utils;
 
 namespace covidSim.Services
 {
@@ -13,7 +14,10 @@ namespace covidSim.Services
         private static Game _gameInstance;
         private static Random _random = new Random();
         
-        public const int PeopleCount = 300;
+        public const int PeopleCount = 320;
+
+        private const double InfectionRadius = 7.0;
+        private const double ChanceOfInfection = 0.5;
         public const int FieldWidth = 1000;
         public const int FieldHeight = 500;
         public const int MaxPeopleInHouse = 10;
@@ -27,11 +31,16 @@ namespace covidSim.Services
 
         public static Game Instance => _gameInstance ?? (_gameInstance = new Game());
 
+        public static void Restart()
+        {
+            _gameInstance = new Game();
+        }
+
         private List<Person> CreatePopulation()
         {
             return Enumerable
                 .Repeat(0, PeopleCount)
-                .Select((_, index) => new Person(index, FindHome(), Map))
+                .Select((_, index) => new Person(index, FindHome(), Map, index <= PeopleCount * 0.03))
                 .ToList();
         }
 
@@ -56,6 +65,7 @@ namespace covidSim.Services
             if (diff >= 1000)
             {
                 CalcNextStep();
+                InfectPeople();
             }
 
             return this;
@@ -64,9 +74,32 @@ namespace covidSim.Services
         private void CalcNextStep()
         {
             _lastUpdate = DateTime.Now;
+            var droppedOutPeople = new List<Person>();
             foreach (var person in People)
             {
                 person.CalcNextStep();
+                if (person.OutOfTheGame)
+                    droppedOutPeople.Add(person);
+            }
+            droppedOutPeople.ForEach(p => People.Remove(p));
+        }
+
+        private void InfectPeople()
+        {
+            var walkingPeople = People.Where(p => p.State == PersonState.Walking).ToList();
+            var infectedPeople = walkingPeople.Where(p => p.Health == PersonHealth.Sick).ToList();
+            var healthyPeople = walkingPeople.Where(p => p.Health == PersonHealth.Healthy);
+            var pairs = 
+                from healthy in healthyPeople
+                from infected in infectedPeople
+                select (healthy, infected);
+            foreach (var (healthy, infected) in pairs)
+            {
+                if (_random.NextDouble() >= ChanceOfInfection &&
+                    (healthy.Position.GetDistanceTo(infected.Position) <= InfectionRadius || 
+                     healthy.State == PersonState.AtHome && infected.State == PersonState.AtHome && 
+                                                                  healthy.HomeId == infected.HomeId))
+                    healthy.ChangeHealth(PersonHealth.Sick);
             }
         }
     }
