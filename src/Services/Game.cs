@@ -122,11 +122,11 @@ namespace covidSim.Services
         
         private static PersonHealth GetHealth(ICollection<int> doctorIndexes, int index)
         {
-            return doctorIndexes.Contains(index)
-                ? PersonHealth.Doctor
-                : index <= PeopleCount * 0.03
-                    ? PersonHealth.Sick
-                    : PersonHealth.Healthy;
+            if (doctorIndexes.Contains(index))
+                return PersonHealth.Doctor;
+            if (index <= PeopleCount * 0.03)
+                return PersonHealth.Sick;
+            return PersonHealth.Healthy;
         }
     }
 }
