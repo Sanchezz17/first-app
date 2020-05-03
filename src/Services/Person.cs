@@ -14,6 +14,9 @@ namespace covidSim.Services
         public PersonHealth Health = PersonHealth.Healthy;
         private readonly CityMap map;
 
+        private int shopId;
+        private int stepsInShop = 0;
+
         internal PersonState State { get; private set; } = PersonState.AtHome;
         
         public Person(int id, int homeId, CityMap map, PersonHealth health)
@@ -86,7 +89,40 @@ namespace covidSim.Services
                 case PersonState.GoingHome:                   
                     CalcNextPositionForGoingHomePerson();
                     break;
+                case PersonState.GoingShop:
+                    CalcNextPositionForGoingShopPerson();
+                    break;
+                case PersonState.AtShop:
+                    CalcNextPositionForPersonAtShop();
+                    break;
             }
+        }
+
+        private void CalcNextPositionForPersonAtShop()
+        {
+            if (stepsInShop < 10)
+            {
+                stepsInShop++;
+
+                var nextPosition = GenerateNextRandomPosition();
+
+                if (isCoordInField(nextPosition) && IsCoordsInHouse(nextPosition, shopId))
+                    Position = nextPosition;
+            }
+            else
+            {
+                stepsInShop = 0;
+                State = PersonState.GoingHome;
+                CalcNextPositionForGoingHomePerson();
+            }
+        }
+
+        private void CalcNextPositionForGoingShopPerson()
+        {
+            if (shopId == -1)
+                return;
+
+            CalcNextPositionForPersonGoingTo(shopId, PersonState.AtShop);
         }
 
         private bool TryToDie()
@@ -118,9 +154,29 @@ namespace covidSim.Services
                 CalcNextPositionForStayingHomePerson();
             else
             {
-                State = PersonState.Walking;
-                CalcNextPositionForWalkingPerson();
+                var goingShop = random.NextDouble() < 0.4;
+                if (goingShop)
+                {
+                    State = PersonState.GoingShop;
+                    shopId = FindShop();
+                    CalcNextPositionForGoingShopPerson();
+                }
+                else
+                {
+                    State = PersonState.Walking;
+                    CalcNextPositionForWalkingPerson();
+                }
             }
+        }
+
+        private int FindShop()
+        {
+            var shops = map.Houses
+                .Where(house => house.IsShop)
+                .Select(house => house.Id)
+                .ToArray();
+
+            return shops[new Random().Next(shops.Length)];
 
         }
 
@@ -128,7 +184,35 @@ namespace covidSim.Services
         {
             var nextPosition = GenerateNextRandomPosition();
 
-            if (isCoordInField(nextPosition) && IsCoordsInHouse(nextPosition))
+            if (isCoordInField(nextPosition) && IsCoordsInHouse(nextPosition, HomeId))
+                Position = nextPosition;
+        }
+
+        private bool IsCoordsInHouse(Vec vec, int homeId)
+        {
+            var houseCoordinates = map.Houses[homeId].Coordinates.LeftTopCorner;
+
+            return
+                vec.X >= houseCoordinates.X && vec.X <= HouseCoordinates.Width+ houseCoordinates.X &&
+                vec.Y >= houseCoordinates.Y && vec.Y <= HouseCoordinates.Height+houseCoordinates.Y;
+        }
+
+        private Vec GenerateNextRandomPosition()
+        {
+            var xLength = random.Next(MaxDistancePerTurn);
+            var yLength = MaxDistancePerTurn - xLength;
+            var direction = ChooseDirection();
+            var delta = new Vec(xLength * direction.X, yLength * direction.Y);
+            var nextPosition = new Vec(Position.X + delta.X, Position.Y + delta.Y);
+
+            return nextPosition;
+        }
+
+        private void CalcNextPositionForStayingHomePerson()
+        {
+            var nextPosition = GenerateNextRandomPosition();
+
+            if (IsCoordInField(nextPosition) && IsCoordsInHouse(nextPosition))
                 Position = nextPosition;
         }
 
@@ -148,7 +232,6 @@ namespace covidSim.Services
             var direction = ChooseDirection();
             var delta = new Vec(xLength * direction.X, yLength * direction.Y);
             var nextPosition = new Vec(Position.X + delta.X, Position.Y + delta.Y);
-
             return nextPosition;
         }
 
@@ -159,8 +242,8 @@ namespace covidSim.Services
             var direction = ChooseDirection();
             var delta = new Vec(xLength * direction.X, yLength * direction.Y);
             var nextPosition = new Vec(Position.X + delta.X, Position.Y + delta.Y);
-
-            if (isCoordInField(nextPosition) && !IsCoordInAnyHouse(nextPosition))
+            
+            if (IsCoordInField(nextPosition) && !IsCoordInAnyHouse(nextPosition))
             {
                 Position = nextPosition;
             }
@@ -185,8 +268,13 @@ namespace covidSim.Services
 
         private void CalcNextPositionForGoingHomePerson()
         {
+            CalcNextPositionForPersonGoingTo(HomeId, PersonState.AtHome);
+        }
+
+        private void CalcNextPositionForPersonGoingTo(int houseId, PersonState destionationState)
+        {
             var game = Game.Instance;
-            var homeCoord = game.Map.Houses[HomeId].Coordinates.LeftTopCorner;
+            var homeCoord = game.Map.Houses[houseId].Coordinates.LeftTopCorner;
             var homeCenter = new Vec(homeCoord.X + HouseCoordinates.Width / 2,
                 homeCoord.Y + HouseCoordinates.Height / 2);
 
@@ -199,7 +287,7 @@ namespace covidSim.Services
             if (distance <= MaxDistancePerTurn)
             {
                 Position = homeCenter;
-                State = PersonState.AtHome;
+                State = destionationState;
                 return;
             }
 
@@ -233,7 +321,7 @@ namespace covidSim.Services
             return directions[index];
         }
 
-        private bool isCoordInField(Vec vec)
+        private bool IsCoordInField(Vec vec)
         {
             var belowZero = vec.X < 0 || vec.Y < 0;
             var beyondField = vec.X > Game.FieldWidth || vec.Y > Game.FieldHeight;

@@ -59,7 +59,7 @@ namespace covidSim.Services
             {
                 var homeId = _random.Next(CityMap.HouseAmount);
 
-                if (Map.Houses[homeId].ResidentCount < MaxPeopleInHouse)
+                if (Map.Houses[homeId].ResidentCount < MaxPeopleInHouse && !Map.Houses[homeId].IsShop)
                 {
                     Map.Houses[homeId].ResidentCount++;
                     return homeId;
@@ -96,16 +96,27 @@ namespace covidSim.Services
 
         private void InfectPeople()
         {
-            var walkingPeople = People.Where(p => p.State == PersonState.Walking).ToList();
-            var infectedPeople = walkingPeople.Where(p => p.Health == PersonHealth.Sick).ToList();
-            var healthyPeople = walkingPeople.Where(p => p.Health == PersonHealth.Healthy);
-            var pairs = healthyPeople.Multiply(infectedPeople);
-            foreach (var (healthy, infected) in pairs)
+            var infectedPeople = People.Where(p => p.Health == PersonHealth.Sick).ToList();
+            var healthyPeople = People.Where(p => p.Health == PersonHealth.Healthy);
+            var healthInfectedPairs = healthyPeople.Multiply(infectedPeople);
+            foreach (var (healthy, infected) in healthInfectedPairs)
             {
-                if (healthy.Position.GetDistanceTo(infected.Position) <= InfectionRadius && 
-                    _random.NextDouble() >= ChanceOfInfection)
+                if (_random.NextDouble() >= ChanceOfInfection &&
+                    (CanBeInfectedThroughWalk(healthy, infected) || CanBeInfectedThroughHome(healthy, infected)))
                     healthy.ChangeHealth(PersonHealth.Sick);
             }
+        }
+
+        private bool CanBeInfectedThroughWalk(Person healthy, Person infected)
+        {
+            return healthy.State == PersonState.Walking && infected.State == PersonState.Walking &&
+                   healthy.Position.GetDistanceTo(infected.Position) <= InfectionRadius;
+        }
+
+        private bool CanBeInfectedThroughHome(Person healthy, Person infected)
+        {
+            return healthy.State == PersonState.AtHome && infected.State == PersonState.AtHome && 
+                   healthy.HomeId == infected.HomeId;
         }
 
         private void HealPeople()

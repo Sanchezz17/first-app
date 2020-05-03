@@ -10,6 +10,11 @@ const HEALTH_COLORS = {
     doctor: "green"
 };
 
+const BORED_COLORS = {
+    bored: "#5499c7",
+    notBored: "black"
+}
+
 export default function Person({ person, onClick }) {
     const x = person.position.x / MAX_WIDTH * 100;
     const y = person.position.y / MAX_HEIGHT * 100;
