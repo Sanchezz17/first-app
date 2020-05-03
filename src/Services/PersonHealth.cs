@@ -2,6 +2,6 @@
 {
     public enum PersonHealth
     {
-        Healthy, Sick, Dead
+        Healthy, Sick, Dead, Doctor
     }
 }
