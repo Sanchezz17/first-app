@@ -1,11 +1,20 @@
 using System;
 using System.Linq;
 using covidSim.Models;
+using covidSim.Utils;
 
 namespace covidSim.Services
 {
     public class Person
     {
+        private static readonly Vec[] Directions = new Vec[]
+        {
+            new Vec(-1, -1),
+            new Vec(-1, 1),
+            new Vec(1, -1),
+            new Vec(1, 1),
+        };
+        
         private const int MaxDistancePerTurn = 30;
         private const int InitialStepsToRecovery = 35;
         private const int InitialStepsToRot = 10;
@@ -13,6 +22,7 @@ namespace covidSim.Services
         private static Random random = new Random();
         public PersonHealth Health = PersonHealth.Healthy;
         private readonly CityMap map;
+        private House nearestMarket;
 
         internal PersonState State { get; private set; } = PersonState.AtHome;
         
@@ -31,6 +41,25 @@ namespace covidSim.Services
             var x = homeCoords.X + random.Next(HouseCoordinates.Width);
             var y = homeCoords.Y + random.Next(HouseCoordinates.Height);
             Position = new Vec(x, y);
+
+            nearestMarket = FindNearestMarket(map);
+        }
+
+        private House FindNearestMarket(CityMap map)
+        {
+            House nearestMarket = null;
+            var minDistanceToMarket = double.MaxValue;
+            foreach (var market in map.Markets)
+            {
+                var currentDistanceToMarket = Position.GetDistanceTo(market.Coordinates.LeftTopCorner);
+                if (currentDistanceToMarket < minDistanceToMarket)
+                {
+                    minDistanceToMarket = currentDistanceToMarket;
+                    nearestMarket = market;
+                }
+            }
+
+            return nearestMarket;
         }
 
         public int Id;
@@ -146,7 +175,7 @@ namespace covidSim.Services
         {
             var xLength = random.Next(MaxDistancePerTurn);
             var yLength = MaxDistancePerTurn - xLength;
-            var direction = ChooseDirection();
+            var direction = ChooseRandomDirection();
             var delta = new Vec(xLength * direction.X, yLength * direction.Y);
             var nextPosition = new Vec(Position.X + delta.X, Position.Y + delta.Y);
 
@@ -157,9 +186,7 @@ namespace covidSim.Services
         {
             var xLength = random.Next(MaxDistancePerTurn);
             var yLength = MaxDistancePerTurn - xLength;
-            var direction = ChooseDirection();
-            var delta = new Vec(xLength * direction.X, yLength * direction.Y);
-            var nextPosition = new Vec(Position.X + delta.X, Position.Y + delta.Y);
+            var nextPosition = ChooseNearestToMarketNextPosition(xLength, yLength);
 
             if (isCoordInField(nextPosition) && !IsCoordInAnyHouse(nextPosition))
             {
@@ -221,17 +248,30 @@ namespace covidSim.Services
             CalcNextPositionForGoingHomePerson();
         }
 
-        private Vec ChooseDirection()
+        private Vec ChooseRandomDirection()
         {
-            var directions = new Vec[]
+            var index = random.Next(Directions.Length);
+            return Directions[index];
+        }
+
+        private Vec ChooseNearestToMarketNextPosition(int xLength, int yLength)
+        {
+            Vec nearestToMarketDirection = null;
+            var newMinDistanceToMarket = double.MaxValue;
+            foreach (var direction in Directions)
             {
-                new Vec(-1, -1),
-                new Vec(-1, 1),
-                new Vec(1, -1),
-                new Vec(1, 1),
-            };
-            var index = random.Next(directions.Length);
-            return directions[index];
+                var delta = new Vec(xLength * direction.X, yLength * direction.Y);
+                var nextPosition = Position.Add(delta);
+                var currentDistanceToMarket = nextPosition.GetDistanceTo(nearestMarket.Coordinates.LeftTopCorner);
+                if (currentDistanceToMarket < newMinDistanceToMarket
+                    && !IsCoordInAnyHouse(nextPosition))
+                {
+                    nearestToMarketDirection = direction;
+                    newMinDistanceToMarket = currentDistanceToMarket;
+                }
+            }
+
+            return nearestToMarketDirection ?? ChooseRandomDirection();
         }
 
         private bool isCoordInField(Vec vec)

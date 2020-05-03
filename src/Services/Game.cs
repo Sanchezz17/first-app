@@ -49,14 +49,14 @@ namespace covidSim.Services
             while (true)
             {
                 var homeId = _random.Next(CityMap.HouseAmount);
-
-                if (Map.Houses[homeId].ResidentCount < MaxPeopleInHouse)
+                var home = Map.Houses[homeId];
+                
+                if (home.ResidentCount < MaxPeopleInHouse && !home.IsMarket)
                 {
-                    Map.Houses[homeId].ResidentCount++;
+                    home.ResidentCount++;
                     return homeId;
                 }
             }
-            
         }
 
         public Game GetNextState()

@@ -54,7 +54,11 @@ export default class App extends React.Component {
             .then(game => {
                 this.setState({
                     people: game.people,
-                    map: game.map.houses.map(i => i.coordinates.leftTopCorner),
+                    map: game.map.houses.map(i => ({
+                        x: i.coordinates.leftTopCorner.x,
+                        y: i.coordinates.leftTopCorner.y,
+                        isMarket: i.isMarket
+                    })),
                 })
             })
     };
