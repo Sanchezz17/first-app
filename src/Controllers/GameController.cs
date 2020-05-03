@@ -1,3 +1,4 @@
+using covidSim.Models;
 using covidSim.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -21,6 +22,14 @@ namespace covidSim.Controllers
         {
             Game.Restart();
             return Ok(Game.Instance);
+        }
+
+        [HttpPost]
+        [Route("api/config")]
+        public IActionResult ChangeConfiguration([FromBody] GameConfiguration config)
+        {
+            Game.Instance.Configuration = config;
+            return NoContent();
         }
     }
 }
