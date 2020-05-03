@@ -82,14 +82,7 @@ export default class App extends React.Component {
     }
 
     getNewStateFromServer = () => {
-        fetch(gameStateUrl)
-            .then(errorHandler)
-            .then(res => res.json())
-            .then(game => {
-                this.setState({
-                    people: game.people,
-                    map: game.map.houses.map(i => {return {isShop: i.isShop, coordinates: i.coordinates.leftTopCorner}}),
-                })
-            })
+        const response = fetch(gameStateUrl);
+        this.setGameStateFromServer(response);
     }
 }
