@@ -59,7 +59,7 @@ namespace covidSim.Services
             {
                 var homeId = _random.Next(CityMap.HouseAmount);
 
-                if (Map.Houses[homeId].ResidentCount < MaxPeopleInHouse)
+                if (Map.Houses[homeId].ResidentCount < MaxPeopleInHouse && !Map.Houses[homeId].IsShop)
                 {
                     Map.Houses[homeId].ResidentCount++;
                     return homeId;
