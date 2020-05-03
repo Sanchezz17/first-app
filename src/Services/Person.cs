@@ -121,7 +121,6 @@ namespace covidSim.Services
                 State = PersonState.Walking;
                 CalcNextPositionForWalkingPerson();
             }
-
         }
 
         private void CalcNextPositionForStayingHomePerson()
@@ -152,6 +151,33 @@ namespace covidSim.Services
             return nextPosition;
         }
 
+        private void CalcNextPositionForStayingHomePerson()
+        {
+            var nextPosition = GenerateNextRandomPosition();
+
+            if (IsCoordInField(nextPosition) && IsCoordsInHouse(nextPosition))
+                Position = nextPosition;
+        }
+
+        private bool IsCoordsInHouse(Vec vec)
+        {
+            var houseCoordinates = map.Houses[HomeId].Coordinates.LeftTopCorner;
+
+            return
+                vec.X >= houseCoordinates.X && vec.X <= HouseCoordinates.Width+ houseCoordinates.X &&
+                vec.Y >= houseCoordinates.Y && vec.Y <= HouseCoordinates.Height+houseCoordinates.Y;
+        }
+
+        private Vec GenerateNextRandomPosition()
+        {
+            var xLength = random.Next(MaxDistancePerTurn);
+            var yLength = MaxDistancePerTurn - xLength;
+            var direction = ChooseDirection();
+            var delta = new Vec(xLength * direction.X, yLength * direction.Y);
+            var nextPosition = new Vec(Position.X + delta.X, Position.Y + delta.Y);
+            return nextPosition;
+        }
+
         private void CalcNextPositionForWalkingPerson()
         {
             var xLength = random.Next(MaxDistancePerTurn);
@@ -159,8 +185,8 @@ namespace covidSim.Services
             var direction = ChooseDirection();
             var delta = new Vec(xLength * direction.X, yLength * direction.Y);
             var nextPosition = new Vec(Position.X + delta.X, Position.Y + delta.Y);
-
-            if (isCoordInField(nextPosition) && !IsCoordInAnyHouse(nextPosition))
+            
+            if (IsCoordInField(nextPosition) && !IsCoordInAnyHouse(nextPosition))
             {
                 Position = nextPosition;
             }
@@ -233,7 +259,7 @@ namespace covidSim.Services
             return directions[index];
         }
 
-        private bool isCoordInField(Vec vec)
+        private bool IsCoordInField(Vec vec)
         {
             var belowZero = vec.X < 0 || vec.Y < 0;
             var beyondField = vec.X > Game.FieldWidth || vec.Y > Game.FieldHeight;
